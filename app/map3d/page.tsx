@@ -123,7 +123,7 @@ export default function Map3DPage() {
         setSelectedFiles(newSelected);
 
         try {
-          const response = await fetch(`/data/${fileName}`);
+          const response = await fetch(`/data/trips/${fileName}`);
           const csvText = await response.text();
 
           Papa.parse<BusDataRow>(csvText, {
