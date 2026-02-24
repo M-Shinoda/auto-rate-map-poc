@@ -117,16 +117,17 @@ const FEATURE_COLORS: [number, number, number][] = [
 
 export default function RoadMeshPage() {
   const [isMounted, setIsMounted] = useState(false);
+  const [routeType, setRouteType] = useState<'northbound' | 'southbound'>('northbound');
   const [geoJsonData, setGeoJsonData] = useState<GeoJSONData | null>(null);
   const [featureOffsets, setFeatureOffsets] = useState<FeatureOffset[]>([]);
   const [roadWidth, setRoadWidth] = useState<number>(0.00009); // 約9m
   const [extrusionHeight, setExtrusionHeight] = useState<number>(50); // 押し出し高さ
   const [baseElevation, setBaseElevation] = useState<number>(80); // 基準の地面からの高さ
   const [viewState, setViewState] = useState<MapViewStateType>({
-    longitude: 140.5307,
-    latitude: 36.5388,
-    zoom: 14,
-    pitch: 60,
+    longitude: 140.5257,
+    latitude: 36.5384,
+    zoom: 15,
+    pitch: 45,
     bearing: 0,
   });
 
@@ -142,7 +143,8 @@ export default function RoadMeshPage() {
   useEffect(() => {
     setIsMounted(true);
 
-    fetch('/data/base-route/northbound-routes.json')
+    const filename = routeType === 'northbound' ? 'northbound-routes.json' : 'southbound-routes.json';
+    fetch(`/data/base-route/${filename}`)
       .then((res) => res.json())
       .then((data: GeoJSONData) => {
         setGeoJsonData(data);
@@ -156,15 +158,15 @@ export default function RoadMeshPage() {
         }));
         setFeatureOffsets(offsets);
         
-        // 最初の座標でビューを初期化
-        const firstCoords = data.features[0]?.geometry?.coordinates?.[0];
-        if (firstCoords) {
-          const [lon, lat] = firstCoords;
-          setViewState((prev) => ({ ...prev, longitude: lon, latitude: lat }));
-        }
+        // // 最初の座標でビューを初期化
+        // const firstCoords = data.features[0]?.geometry?.coordinates?.[0];
+        // if (firstCoords) {
+        //   const [lon, lat] = firstCoords;
+        //   setViewState((prev) => ({ ...prev, longitude: lon, latitude: lat }));
+        // }
       })
       .catch((err) => console.error('GeoJSON読み込みエラー:', err));
-  }, []);
+  }, [routeType]);
 
   // 道路セグメントの生成
   const roadSegments = useMemo(() => {
@@ -243,6 +245,30 @@ export default function RoadMeshPage() {
       {/* コントロールパネル */}
       <div className="absolute top-4 left-4 z-10 bg-white p-4 rounded-lg shadow-lg space-y-4 max-w-xs max-h-[90vh] overflow-y-auto">
         <h2 className="text-lg font-bold">道路メッシュ設定</h2>
+        {/* ルート切り替えボタン */}
+        <div className="flex gap-2">
+          <button
+            onClick={() => setRouteType('northbound')}
+            className={`flex-1 px-3 py-2 rounded font-medium text-sm transition-colors ${
+              routeType === 'northbound'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            北回り
+          </button>
+          <button
+            onClick={() => setRouteType('southbound')}
+            className={`flex-1 px-3 py-2 rounded font-medium text-sm transition-colors ${
+              routeType === 'southbound'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            南回り
+          </button>
+        </div>
+        
         
         <div>
           <label className="block text-sm font-medium mb-1">
