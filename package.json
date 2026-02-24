@@ -13,6 +13,12 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@deck.gl/core": "^9.2.8",
+    "@deck.gl/geo-layers": "^9.2.8",
+    "@deck.gl/layers": "^9.2.8",
+    "@deck.gl/react": "^9.2.8",
+    "@turf/turf": "^7.3.4",
+    "@types/papaparse": "^5.5.2",
     "maplibre-gl": "^5.18.0",
     "next": "16.1.6",
     "papaparse": "^5.5.3",
