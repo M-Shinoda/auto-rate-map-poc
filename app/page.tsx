@@ -23,6 +23,12 @@ export default function Home() {
           >
             3Dマップ
           </Link>
+          <Link
+            href="/road-mesh"
+            className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+          >
+            3Dマップ（道路メッシュ）
+          </Link>
         </div>
       </main>
     </div>
