@@ -471,7 +471,7 @@ export default function RoadMeshPage() {
   const layers = useMemo(() => {
     if (!isMounted) return [];
 
-    const allLayers = [];
+    const allLayers: PolygonLayer[] = [];
 
     // 基本ルートのレイヤー
     if (roadSegments.length > 0) {
@@ -622,7 +622,7 @@ export default function RoadMeshPage() {
           </button>
         </div>
         <div className="text-xs text-center mt-2 text-gray-500">
-          {viewState.bearing.toFixed(0)}° / {viewState.pitch.toFixed(0)}°
+          {(viewState.bearing ?? 0).toFixed(0)}° / {(viewState.pitch ?? 0).toFixed(0)}°
         </div>
       </div>
 
@@ -868,8 +868,6 @@ export default function RoadMeshPage() {
           touchRotate: true,
           keyboard: true,
           inertia: true,
-          maxPitch: 89, // 最大傾斜角度を89度に設定（90度だと真横になりすぎるため）
-          minPitch: 0,
         }}
         layers={layers}
         getTooltip={(info: any) => {

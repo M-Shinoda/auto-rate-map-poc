@@ -435,50 +435,6 @@ export default function Map3DPage() {
           </p>
         </div>
 
-        {/* 層間隔設定 */}
-        <div className="mt-4 p-3 bg-white rounded">
-          <h3 className="font-semibold mb-2">層間隔 (m)</h3>
-          <input
-            type="range"
-            value={layerSpacing}
-            onChange={(e) => setLayerSpacing(Number(e.target.value))}
-            min="100"
-            max="1000"
-            step="50"
-            className="w-full"
-          />
-          <div className="flex justify-between text-xs text-gray-600">
-            <span>100m</span>
-            <span className="font-semibold">{layerSpacing}m</span>
-            <span>1000m</span>
-          </div>
-          <p className="text-xs text-gray-500 mt-1">
-            ファイル間の垂直距離
-          </p>
-        </div>
-
-        {/* オフセット高さ設定 */}
-        <div className="mt-4 p-3 bg-white rounded">
-          <h3 className="font-semibold mb-2">基準オフセット高さ (m)</h3>
-          <input
-            type="range"
-            value={baseOffset}
-            onChange={(e) => setBaseOffset(Number(e.target.value))}
-            min="-500"
-            max="2000"
-            step="50"
-            className="w-full"
-          />
-          <div className="flex justify-between text-xs text-gray-600">
-            <span>-500m</span>
-            <span className="font-semibold">{baseOffset}m</span>
-            <span>2000m</span>
-          </div>
-          <p className="text-xs text-gray-500 mt-1">
-            全体の垂直位置
-          </p>
-        </div>
-
         {/* ボックス高さ設定 */}
         <div className="mt-4 p-3 bg-white rounded">
           <h3 className="font-semibold mb-2">ボックス高さ (m)</h3>
