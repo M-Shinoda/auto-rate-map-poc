@@ -77,7 +77,7 @@ export default function MapPage() {
             });
           }
         },
-        error: (error) => {
+        error: (error: Error) => {
           console.error("CSV parsing error:", error);
         },
       });
@@ -97,7 +97,9 @@ export default function MapPage() {
 
     const feature: GeoJSONFeature = {
       type: "Feature",
-      properties: {},
+      properties: {
+        autoRatio: 0,
+      },
       geometry: {
         type: "LineString",
         coordinates,
@@ -181,19 +183,19 @@ export default function MapPage() {
       }
 
       return {
-        type: "Feature",
+        type: "Feature" as const,
         properties: {
           autoRatio: segment.autoRatio,
         },
         geometry: {
-          type: "LineString",
+          type: "LineString" as const,
           coordinates,
         },
       };
     });
 
     return {
-      type: "FeatureCollection",
+      type: "FeatureCollection" as const,
       features,
     };
   }, [segments, busData]);

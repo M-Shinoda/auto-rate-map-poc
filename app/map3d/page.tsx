@@ -159,7 +159,7 @@ export default function Map3DPage() {
                 }));
               }
             },
-            error: (error) => {
+            error: (error: Error) => {
               console.error('CSV parsing error:', error);
             },
           });
