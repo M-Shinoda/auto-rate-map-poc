@@ -41,8 +41,12 @@ interface FeatureOffset {
 }
 
 /**
- * LineStringから滑らかな道路ポリゴンを生成（1つの連続したポリゴン）
- * 各頂点に3D座標（lon, lat, baseHeight）を追加
+ * LineStringから道路ポリゴンを生成
+ * @param coordinates - LineStringの座標配列
+ * @param width - 道路の幅（度単位）
+ * @param baseHeight - 底面の高さ（メートル）
+ * @param topHeight - 上面の高さ（メートル）
+ * @param featureIndex - Feature識別用インデックス
  */
 function generateRoadPolygons(
   coordinates: number[][],
@@ -50,57 +54,56 @@ function generateRoadPolygons(
   baseHeight: number,
   topHeight: number,
   featureIndex: number
-): RoadSegment[] {
-  if (coordinates.length < 2) return [];
+): RoadSegment {
+  const coordsCount = coordinates.length;
+  const halfWidth = width / 2;
   
-  const leftSide: number[][] = [];
-  const rightSide: number[][] = [];
+  // 左右の座標を事前に確保
+  const leftSide: number[][] = new Array(coordsCount);
+  const rightSide: number[][] = new Array(coordsCount);
   
-  for (let i = 0; i < coordinates.length; i++) {
+  for (let i = 0; i < coordsCount; i++) {
     const [lon, lat] = coordinates[i];
     
-    // 前後の点から方向を計算
-    let dx = 0;
-    let dy = 0;
+    // 接線ベクトルの計算
+    let dx: number, dy: number;
     
     if (i === 0) {
-      // 最初の点：次の点との方向
-      dx = coordinates[i + 1][0] - lon;
-      dy = coordinates[i + 1][1] - lat;
-    } else if (i === coordinates.length - 1) {
-      // 最後の点：前の点との方向
-      dx = lon - coordinates[i - 1][0];
-      dy = lat - coordinates[i - 1][1];
+      const next = coordinates[1];
+      dx = next[0] - lon;
+      dy = next[1] - lat;
+    } else if (i === coordsCount - 1) {
+      const prev = coordinates[i - 1];
+      dx = lon - prev[0];
+      dy = lat - prev[1];
     } else {
-      // 中間の点：前後の点の平均方向
-      dx = coordinates[i + 1][0] - coordinates[i - 1][0];
-      dy = coordinates[i + 1][1] - coordinates[i - 1][1];
+      const prev = coordinates[i - 1];
+      const next = coordinates[i + 1];
+      dx = next[0] - prev[0];
+      dy = next[1] - prev[1];
     }
     
     const length = Math.sqrt(dx * dx + dy * dy);
     if (length === 0) continue;
     
-    // 垂直ベクトル（90度回転）
-    const perpDx = -dy / length * width / 2;
-    const perpDy = dx / length * width / 2;
+    // 法線ベクトル（正規化済み）
+    const invLength = 1 / length;
+    const perpDx = -dy * invLength * halfWidth;
+    const perpDy = dx * invLength * halfWidth;
     
-    // 左右の点を追加（3D座標：lon, lat, z）
-    leftSide.push([lon - perpDx, lat - perpDy, baseHeight]);
-    rightSide.push([lon + perpDx, lat + perpDy, baseHeight]);
+    // 3D座標として格納
+    leftSide[i] = [lon - perpDx, lat - perpDy, baseHeight];
+    rightSide[i] = [lon + perpDx, lat + perpDy, baseHeight];
   }
   
-  // 左側を前から、右側を後ろから結合して1つのポリゴンを作成
-  const polygon = [
-    ...leftSide,
-    ...rightSide.reverse(),
-    leftSide[0], // 閉じる
-  ];
+  // ポリゴンの構築（右側を反転して結合）
+  const polygon = leftSide.concat(rightSide.reverse());
   
-  return [{
+  return {
     polygon,
     topElevation: topHeight,
     featureIndex,
-  }];
+  };
 }
 
 const FEATURE_COLORS: [number, number, number][] = [
@@ -116,7 +119,7 @@ export default function RoadMeshPage() {
   const [isMounted, setIsMounted] = useState(false);
   const [geoJsonData, setGeoJsonData] = useState<GeoJSONData | null>(null);
   const [featureOffsets, setFeatureOffsets] = useState<FeatureOffset[]>([]);
-  const [roadWidth, setRoadWidth] = useState<number>(0.00005); // 約5m
+  const [roadWidth, setRoadWidth] = useState<number>(0.00009); // 約9m
   const [extrusionHeight, setExtrusionHeight] = useState<number>(50); // 押し出し高さ
   const [baseElevation, setBaseElevation] = useState<number>(80); // 基準の地面からの高さ
   const [viewState, setViewState] = useState<MapViewStateType>({
@@ -139,28 +142,25 @@ export default function RoadMeshPage() {
   useEffect(() => {
     setIsMounted(true);
 
-    // GeoJSONデータを読み込む
     fetch('/data/northbound-routes.json')
       .then((res) => res.json())
       .then((data: GeoJSONData) => {
         setGeoJsonData(data);
         
-        // 各featureにオフセットと色を設定
+        // 各featureにオフセットと色を割り当て
+        const colorCount = FEATURE_COLORS.length;
         const offsets: FeatureOffset[] = data.features.map((_, index) => ({
           index,
-          offset: index * 50, // 各featureを50mずつオフセット
-          color: FEATURE_COLORS[index % FEATURE_COLORS.length],
+          offset: index * 50,
+          color: FEATURE_COLORS[index % colorCount],
         }));
         setFeatureOffsets(offsets);
         
-        // 最初の座標にビューを設定
-        if (data.features.length > 0 && data.features[0].geometry.coordinates.length > 0) {
-          const [lon, lat] = data.features[0].geometry.coordinates[0];
-          setViewState((prev) => ({
-            ...prev,
-            longitude: lon,
-            latitude: lat,
-          }));
+        // 最初の座標でビューを初期化
+        const firstCoords = data.features[0]?.geometry?.coordinates?.[0];
+        if (firstCoords) {
+          const [lon, lat] = firstCoords;
+          setViewState((prev) => ({ ...prev, longitude: lon, latitude: lat }));
         }
       })
       .catch((err) => console.error('GeoJSON読み込みエラー:', err));
@@ -170,45 +170,56 @@ export default function RoadMeshPage() {
   const roadSegments = useMemo(() => {
     if (!geoJsonData || featureOffsets.length === 0) return [];
 
-    const allSegments: RoadSegment[] = [];
+    const segments: RoadSegment[] = [];
     
     geoJsonData.features.forEach((feature, index) => {
-      if (feature.geometry.type === 'LineString') {
-        const featureOffset = featureOffsets.find(f => f.index === index);
-        const baseHeight = baseElevation + (featureOffset?.offset || 0);
-        const topHeight = baseHeight + extrusionHeight;
-        
-        const segments = generateRoadPolygons(
-          feature.geometry.coordinates,
-          roadWidth,
-          baseHeight, // 底面の高さ（Z座標）
-          topHeight,  // 上面の高さ
-          index
-        );
-        allSegments.push(...segments);
+      if (feature.geometry.type !== 'LineString' || feature.geometry.coordinates.length < 2) {
+        return;
       }
+      
+      const featureOffset = featureOffsets[index];
+      if (!featureOffset) return;
+      
+      const baseHeight = baseElevation + featureOffset.offset;
+      const topHeight = baseHeight + extrusionHeight;
+      
+      const segment = generateRoadPolygons(
+        feature.geometry.coordinates,
+        roadWidth,
+        baseHeight,
+        topHeight,
+        index
+      );
+      segments.push(segment);
     });
     
-    return allSegments;
+    return segments;
   }, [geoJsonData, roadWidth, baseElevation, extrusionHeight, featureOffsets]);
+
+  // 高速アクセス用のオフセットマップ
+  const offsetMap = useMemo(() => {
+    const map: Record<number, FeatureOffset> = {};
+    featureOffsets.forEach(offset => {
+      map[offset.index] = offset;
+    });
+    return map;
+  }, [featureOffsets]);
 
   // PolygonLayerの作成
   const layers = useMemo(() => {
-    if (!isMounted || roadSegments.length === 0 || featureOffsets.length === 0) return [];
+    if (!isMounted || roadSegments.length === 0) return [];
 
     return roadSegments.map((segment) => {
-      const featureOffset = featureOffsets.find(f => f.index === segment.featureIndex);
+      const featureOffset = offsetMap[segment.featureIndex];
       const color = featureOffset?.color || [255, 200, 0];
+      const fillColor: [number, number, number, number] = [color[0], color[1], color[2], 200];
 
       return new PolygonLayer({
         id: `road-mesh-layer-${segment.featureIndex}`,
         data: [segment],
-        getPolygon: (d: RoadSegment) => d.polygon, // 3D座標を含むポリゴン
-        getElevation: (d: RoadSegment) => d.topElevation - d.polygon[0][2], // 底面からの相対高さ
-        getFillColor: [...color, 200] as [number, number, number, number],
-        getLineColor: [...color.map(c => c * 0.8), 255] as [number, number, number, number],
-        getLineWidth: 2,
-        lineWidthMinPixels: 1,
+        getPolygon: (d: RoadSegment) => d.polygon,
+        getElevation: (d: RoadSegment) => d.topElevation - d.polygon[0][2],
+        getFillColor: fillColor,
         extruded: true,
         wireframe: false,
         pickable: true,
@@ -217,7 +228,7 @@ export default function RoadMeshPage() {
         elevationScale: 1,
       });
     });
-  }, [roadSegments, featureOffsets, isMounted]);
+  }, [roadSegments, offsetMap, isMounted]);
 
   if (!isMounted) {
     return (
