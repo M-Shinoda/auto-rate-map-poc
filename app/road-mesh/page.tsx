@@ -142,7 +142,7 @@ export default function RoadMeshPage() {
   useEffect(() => {
     setIsMounted(true);
 
-    fetch('/data/northbound-routes.json')
+    fetch('/data/base-route/northbound-routes.json')
       .then((res) => res.json())
       .then((data: GeoJSONData) => {
         setGeoJsonData(data);
